@@ -245,6 +245,33 @@ def login_page():
         from yuji_avatar import wombat_html
         st.markdown(wombat_html, unsafe_allow_html=True)
         
+        import streamlit.components.v1 as components
+        components.html("""
+        <script>
+            function updateTilt(e) {
+                try {
+                    const doc = window.parent.document;
+                    const container = doc.getElementById('yuji-3d-container');
+                    if (!container) return;
+                    
+                    const x = e.clientX / window.parent.innerWidth - 0.5;
+                    const y = e.clientY / window.parent.innerHeight - 0.5;
+                    
+                    const rotateY = x * 50;
+                    const rotateX = -y * 50;
+                    
+                    container.style.setProperty('--rx', rotateX + 'deg');
+                    container.style.setProperty('--ry', rotateY + 'deg');
+                } catch (err) {
+                    console.log(err);
+                }
+            }
+            try {
+                window.parent.document.addEventListener('mousemove', updateTilt);
+            } catch (err) {}
+        </script>
+        """, height=0, width=0)
+        
         st.text_input("Username")
         st.text_input("Password", type="password")
         
