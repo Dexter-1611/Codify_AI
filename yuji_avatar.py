@@ -101,7 +101,7 @@ wombat_html = """
   }
 </style>
 
-<div style="text-align: center; margin-bottom: 20px;">
+<div style="display: flex; justify-content: center; align-items: center; margin-bottom: 20px; width: 100%;">
   <div class="yuji-wrapper">
     <div class="yuji-container" id="yuji-3d-container">
       <div class="yuji-eyelid eyelid-left"></div>
