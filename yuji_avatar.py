@@ -53,18 +53,18 @@ wombat_html = """
   .eyelid-right { right: 36px; transform-origin: top center; }
 
   /* Username field focus animation: Yuji leans in */
-  body:has(input[type="text"]:focus) .yuji-img {
+  body:has(input[aria-label="Username"]:focus) .yuji-img {
     transform: scale(1.15) translate(3px, 5px) !important;
     animation: none;
   }
   
   /* Password field focus animation: Eyes close FIRST, then blindfold drops */
-  body:has(input[type="password"]:focus) .yuji-eyelid {
+  body:has(input[aria-label="Password"]:focus) .yuji-eyelid {
     transform: scaleY(1);
     transition-delay: 0s;
   }
 
-  body:has(input[type="password"]:focus) .yuji-img {
+  body:has(input[aria-label="Password"]:focus) .yuji-img {
     transform: scale(0.95) translateY(10px) !important;
     filter: brightness(0.6) blur(2px);
     animation: none;
@@ -95,7 +95,7 @@ wombat_html = """
     font-weight: 600;
   }
   
-  body:has(input[type="password"]:focus) .yuji-blindfold {
+  body:has(input[aria-label="Password"]:focus) .yuji-blindfold {
     top: 0;
     transition-delay: 0.2s; /* Drops slightly after eyes close */
   }
