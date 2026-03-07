@@ -272,6 +272,28 @@ def login_page():
         </script>
         """, height=0, width=0)
         
+        st.markdown("""
+            <h1 style='text-align: center; 
+                       color: #fff; 
+                       text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #dc143c, 0 0 40px #dc143c, 0 0 50px #dc143c, 0 0 60px #dc143c, 0 0 70px #dc143c; 
+                       font-family: "Space Grotesk", sans-serif;
+                       font-size: 3.5rem;
+                       margin-top: 10px;
+                       margin-bottom: 30px;
+                       letter-spacing: 4px;
+                       font-weight: 800;
+                       user-select: none;
+                       animation: neon-pulse 1.5s infinite alternate;'>
+                SIGN IN
+            </h1>
+            <style>
+                @keyframes neon-pulse {
+                    0% { opacity: 0.8; text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #dc143c, 0 0 20px #dc143c; filter: brightness(0.9); }
+                    100% { opacity: 1; text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #dc143c, 0 0 40px #dc143c, 0 0 60px #dc143c; filter: brightness(1.1); }
+                }
+            </style>
+        """, unsafe_allow_html=True)
+        
         st.text_input("Username")
         st.text_input("Password", type="password")
         
