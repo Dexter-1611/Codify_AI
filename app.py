@@ -99,31 +99,37 @@ st.markdown("""
 
     /* Inputs and Buttons styling */
     .stTextInput>div>div>input, .stTextArea>div>div>textarea {
-        background-color: rgba(255, 255, 255, 0.03) !important;
-        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        background-color: rgba(255, 255, 255, 0.02) !important;
+        border: 1px solid rgba(255, 255, 255, 0.06) !important;
         color: #f8fafc !important;
-        border-radius: 8px !important;
+        border-radius: 12px !important;
+        transition: all 0.3s ease !important;
     }
     
     .stTextInput>div>div>input:focus, .stTextArea>div>div>textarea:focus {
-        border-color: #ffffff !important;
-        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3) !important;
+        border-color: rgba(220, 20, 60, 0.5) !important;
+        box-shadow: 0 0 20px rgba(220, 20, 60, 0.15) !important;
+        background-color: rgba(255, 255, 255, 0.05) !important;
     }
 
     .stButton>button {
-        background: rgba(255, 255, 255, 0.03) !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        color: #e2e8f0 !important;
-        border-radius: 8px !important;
+        background: linear-gradient(135deg, rgba(220, 20, 60, 0.8), rgba(147, 51, 234, 0.7)) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        color: #ffffff !important;
+        border-radius: 12px !important;
         font-family: 'Space Grotesk', sans-serif !important;
-        letter-spacing: 1px;
-        transition: all 0.2s ease !important;
+        letter-spacing: 2px !important;
+        font-weight: 600 !important;
+        padding: 12px 24px !important;
+        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        text-transform: uppercase !important;
     }
     
     .stButton>button:hover {
-        background: rgba(255, 255, 255, 0.1) !important;
-        border-color: #ffffff !important;
-        color: #ffffff !important;
+        background: linear-gradient(135deg, rgba(220, 20, 60, 1), rgba(147, 51, 234, 0.9)) !important;
+        border-color: rgba(255, 255, 255, 0.8) !important;
+        box-shadow: 0 8px 30px rgba(220, 20, 60, 0.4), inset 0 0 10px rgba(255,255,255,0.2) !important;
+        transform: translateY(-2px) !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -378,106 +384,111 @@ else:
             st.rerun()
 
     if st.session_state['page'] == 'generator':
-        st.markdown("<h1 class='reveal' style='font-family: \"Space Grotesk\", sans-serif; font-weight: 500; font-size: 2rem; color: #f8fafc; margin-bottom: 20px;'>AI <span style='color: #ffffff; opacity: 0.7;'>//</span> ARCHITECT</h1>", unsafe_allow_html=True)
-        q = st.text_area("TASK DEFINITION", placeholder="Describe what you want the AI to do with the data or code...", height=200)
-
-        # --- File Upload Section ---
-        uploaded_file = st.file_uploader(
-            "📂 ATTACH DATASET (Optional — Excel, CSV, Google Sheets Export)",
-            type=["csv", "xls", "xlsx"],
-            help="Upload a CSV, Excel (.xlsx/.xls), or exported Google Sheet file for AI analysis."
-        )
-
-        dataset_context = ""
-        if uploaded_file is not None:
-            try:
-                import io
-                ext = uploaded_file.name.split('.')[-1].lower()
-                raw_bytes = uploaded_file.read()
-                if ext == 'csv':
-                    df = pd.read_csv(io.BytesIO(raw_bytes))
-                else:
-                    df = pd.read_excel(io.BytesIO(raw_bytes))
-
-                st.markdown(f"<p style='font-size:0.8rem; color:#94a3b8; margin-top:8px;'>✅ Loaded <b>{uploaded_file.name}</b> — {df.shape[0]} rows × {df.shape[1]} columns</p>", unsafe_allow_html=True)
-                with st.expander("📊 DATASET PREVIEW", expanded=False):
-                    st.dataframe(df.head(10), use_container_width=True)
-
-                # Build dataset context string for the AI
-                dataset_context = (
-                    f"\n\nREFERENCE DATASET: {uploaded_file.name}\n"
-                    f"Shape: {df.shape[0]} rows × {df.shape[1]} columns\n"
-                    f"Columns: {', '.join(df.columns.tolist())}\n"
-                    f"First 50 rows (CSV format):\n{df.head(50).to_csv(index=False)}"
-                )
-            except Exception as e:
-                st.warning(f"⚠️ Could not read file: {e}")
-        lang = st.selectbox("SYNTAX TARGET", ["Python", "Excel Formula", "Google Sheets Formula"])
-        
-        if st.button("EXECUTE SYNTHESIS"):
-            if q or dataset_context:
-                loader_placeholder = st.empty()
-                loader_html = """
-                <style>
-                .cube-loader {
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    height: 100px;
-                    margin: 20px 0;
-                }
-                .cube {
-                    width: 40px;
-                    height: 40px;
-                    background-color: transparent;
-                    border: 2px solid #ffffff;
-                    animation: spin 2s infinite linear, glow 1.5s infinite alternate;
-                }
-                .loading-text {
-                    text-align: center;
-                    font-family: 'Space Grotesk', monospace;
-                    color: #e2e8f0;
-                    letter-spacing: 3px;
-                    animation: pulse 1s infinite alternate;
-                }
-                @keyframes spin {
-                    0% { transform: rotateX(0deg) rotateY(0deg); }
-                    100% { transform: rotateX(360deg) rotateY(360deg); }
-                }
-                @keyframes glow {
-                    0% { box-shadow: 0 0 5px rgba(255, 255, 255, 0.2); }
-                    100% { box-shadow: 0 0 20px rgba(255, 255, 255, 0.8), inset 0 0 10px rgba(255, 255, 255, 0.5); }
-                }
-                </style>
-                <div class="cube-loader">
-                    <div class="cube"></div>
-                </div>
-                <div class="loading-text">SYNTHESIZING NEURAL PATHWAYS...</div>
-                """
-                loader_placeholder.markdown(loader_html, unsafe_allow_html=True)
-                
+        _, center_col, _ = st.columns([1, 2.5, 1])
+        with center_col:
+            st.markdown("<h1 class='reveal' style='font-family: \"Space Grotesk\", sans-serif; font-weight: 700; font-size: 2.5rem; text-align: center; margin-bottom: 30px; margin-top: 10px; background: linear-gradient(to right, #dc143c, #9333ea); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>AI <span style='opacity: 0.3; -webkit-text-fill-color: #ffffff;'>//</span> ARCHITECT</h1>", unsafe_allow_html=True)
+            q = st.text_area("What would you like to build?", placeholder="Describe your objective, feature, or data manipulation task in plain English...", height=180)
+            
+            # --- File Upload Section ---
+            uploaded_file = st.file_uploader(
+                "Attach context dataset (Optional)",
+                type=["csv", "xls", "xlsx"],
+                help="Upload a CSV, Excel (.xlsx/.xls), or exported Google Sheet file for AI analysis."
+            )
+            
+            dataset_context = ""
+            if uploaded_file is not None:
                 try:
-                    if "Formula" in lang:
-                        base_prompt = f"Write a professional {lang} for the following request: {q}" if q else f"Analyze the provided dataset and write helpful {lang}s to process it."
+                    import io
+                    ext = uploaded_file.name.split('.')[-1].lower()
+                    raw_bytes = uploaded_file.read()
+                    if ext == 'csv':
+                        df = pd.read_csv(io.BytesIO(raw_bytes))
                     else:
-                        base_prompt = f"Write professional {lang} code for: {q}" if q else f"Analyse the provided dataset and write professional {lang} code to process it."
-                    
-                    full_prompt = base_prompt + dataset_context
-                    chat = client.chat.completions.create(
-                        messages=[{"role": "user", "content": full_prompt}],
-                        model="llama-3.3-70b-versatile"
+                        df = pd.read_excel(io.BytesIO(raw_bytes))
+                        
+                    st.markdown(f"<p style='font-size:0.8rem; color:#94a3b8; margin-top:8px;'>✅ Loaded <b>{uploaded_file.name}</b> — {df.shape[0]} rows × {df.shape[1]} columns</p>", unsafe_allow_html=True)
+                    with st.expander("📊 DATASET PREVIEW", expanded=False):
+                        st.dataframe(df.head(10), use_container_width=True)
+                        
+                    # Build dataset context string for the AI
+                    dataset_context = (
+                        f"\n\nREFERENCE DATASET: {uploaded_file.name}\n"
+                        f"Shape: {df.shape[0]} rows × {df.shape[1]} columns\n"
+                        f"Columns: {', '.join(df.columns.tolist())}\n"
+                        f"First 50 rows (CSV format):\n{df.head(50).to_csv(index=False)}"
                     )
-                    st.session_state['res'] = chat.choices[0].message.content
-                    history_label = q if q else f"Dataset analysis: {uploaded_file.name}"
-                    save_to_history(history_label, st.session_state['res'], lang)
                 except Exception as e:
-                    st.error(f"Inference Failure: {e}")
-                finally:
-                    loader_placeholder.empty()
-        
-        if 'res' in st.session_state:
-            st.markdown("### 📡 SYSTEM OUTPUT")
-            st.markdown(st.session_state['res'])
+                    st.warning(f"⚠️ Could not read file: {e}")
+            lang = st.selectbox("Target Language", ["Python", "Excel Formula", "Google Sheets Formula"])
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("Synthesize", use_container_width=True):
+                if q or dataset_context:
+                    loader_placeholder = st.empty()
+                    loader_html = """
+                    <style>
+                    .cube-loader {
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        height: 100px;
+                        margin: 20px 0;
+                    }
+                    .cube {
+                        width: 40px;
+                        height: 40px;
+                        background-color: transparent;
+                        border: 2px solid #ffffff;
+                        animation: spin 2s infinite linear, glow 1.5s infinite alternate;
+                    }
+                    .loading-text {
+                        text-align: center;
+                        font-family: 'Space Grotesk', monospace;
+                        color: #e2e8f0;
+                        letter-spacing: 3px;
+                        animation: pulse 1s infinite alternate;
+                    }
+                    @keyframes spin {
+                        0% { transform: rotateX(0deg) rotateY(0deg); }
+                        100% { transform: rotateX(360deg) rotateY(360deg); }
+                    }
+                    @keyframes glow {
+                        0% { box-shadow: 0 0 5px rgba(255, 255, 255, 0.2); }
+                        100% { box-shadow: 0 0 20px rgba(255, 255, 255, 0.8), inset 0 0 10px rgba(255, 255, 255, 0.5); }
+                    }
+                    </style>
+                    <div class="cube-loader">
+                        <div class="cube"></div>
+                    </div>
+                    <div class="loading-text">SYNTHESIZING NEURAL PATHWAYS...</div>
+                    """
+                    loader_placeholder.markdown(loader_html, unsafe_allow_html=True)
+                    
+                    try:
+                        if "Formula" in lang:
+                            base_prompt = f"Write a professional {lang} for the following request: {q}" if q else f"Analyze the provided dataset and write helpful {lang}s to process it."
+                        else:
+                            base_prompt = f"Write professional {lang} code for: {q}" if q else f"Analyse the provided dataset and write professional {lang} code to process it."
+                        
+                        full_prompt = base_prompt + dataset_context
+                        chat = client.chat.completions.create(
+                            messages=[{"role": "user", "content": full_prompt}],
+                            model="llama-3.3-70b-versatile"
+                        )
+                        st.session_state['res'] = chat.choices[0].message.content
+                        history_label = q if q else f"Dataset analysis: {uploaded_file.name}"
+                        save_to_history(history_label, st.session_state['res'], lang)
+                    except Exception as e:
+                        st.error(f"Inference Failure: {e}")
+                    finally:
+                        loader_placeholder.empty()
+            
+            if 'res' in st.session_state:
+                st.markdown("<div style='margin-top: 40px; padding: 25px; border-radius: 12px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); box-shadow: 0 10px 30px rgba(0,0,0,0.2);'>", unsafe_allow_html=True)
+                st.markdown("<h3 style='font-family: \"Space Grotesk\", sans-serif; font-size: 1.1rem; font-weight: 500; color: #f8fafc; margin-bottom: 20px; letter-spacing: 1px;'>SYSTEM OUTPUT</h3>", unsafe_allow_html=True)
+                st.markdown(st.session_state['res'])
+                st.markdown("</div>", unsafe_allow_html=True)
 
     elif st.session_state['page'] == 'docs':
         st.markdown("<h1 style='font-family: \"Space Grotesk\", sans-serif; font-weight: 500; color: #f8fafc; font-size: 2.2rem; margin-bottom: 30px;' class='reveal'>TECHNICAL <span style='color: #ffffff; opacity: 0.6;'>MANIFESTO</span></h1>", unsafe_allow_html=True)
