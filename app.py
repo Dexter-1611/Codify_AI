@@ -153,26 +153,113 @@ if 'page' not in st.session_state: st.session_state['page'] = 'generator'
 # --- 5. LOGIN PAGE WITH LOGO ---
 def login_page():
     st.markdown("""
-        <div style='text-align: center; margin-top: 100px; margin-bottom: 40px;'>
-            <h1 class='logo-container' style='justify-content: center; font-size: 3rem;'>
-                <span style='font-size: 3.5rem; opacity: 0.9;'>✨</span> CODIFY <span class='logo-highlight'>AI</span>
-            </h1>
-            <p style='font-family: "Space Grotesk", sans-serif; color: #94a3b8; letter-spacing: 3px; font-size: 0.9rem; margin-top: -10px;'>ENTERPRISE NEURAL GATEWAY</p>
-        </div>
+        <style>
+        [data-testid="stAppViewContainer"] {
+            background: radial-gradient(circle at top right, #1a1a1a, #000000) !important;
+        }
+        [data-testid="stHeader"] {
+            background-color: rgba(255, 255, 255, 0.0) !important;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 10px;
+            background: linear-gradient(90deg, #8b0000, #dc143c, #4b0082, #1a1a1a, #4b0082, #dc143c);
+            z-index: 999999;
+        }
+
+        .wombat-paws {
+            transform: translateY(120px);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .wombat-eyes {
+            transition: transform 0.1s ease-out;
+        }
+
+        body:has(input[type="password"]:focus) .wombat-paws {
+            transform: translateY(0px) !important;
+        }
+
+        body:has(input[type="text"]:focus) .wombat-eyes {
+            transform: translateX(4px) translateY(2px) !important;
+        }
+
+        [data-testid="column"]:nth-of-type(2) {
+            background: rgba(255, 255, 255, 0.02) !important;
+            backdrop-filter: blur(10px) !important;
+            -webkit-backdrop-filter: blur(10px) !important;
+            padding: 40px !important;
+            border-radius: 16px !important;
+            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4) !important;
+        }
+        .stTextInput>div>div>input {
+            background-color: rgba(255, 255, 255, 0.03) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            color: #f8fafc !important;
+            border-radius: 8px !important;
+            padding: 10px !important;
+        }
+        .stTextInput>div>div>input:focus {
+            border-color: #ffffff !important;
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3) !important;
+        }
+        .stTextInput label {
+            color: #e2e8f0 !important;
+            font-weight: 500 !important;
+            font-family: 'Space Grotesk', sans-serif !important;
+            font-size: 14px !important;
+            margin-bottom: 4px !important;
+            letter-spacing: 1px;
+        }
+        .stButton>button {
+            background: rgba(255, 255, 255, 0.03) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            color: #e2e8f0 !important;
+            border-radius: 8px !important;
+            font-family: 'Space Grotesk', sans-serif !important;
+            font-weight: 600 !important;
+            letter-spacing: 1px;
+            padding: 10px !important;
+            margin-top: 20px !important;
+            width: 100% !important;
+            transition: all 0.2s ease !important;
+        }
+        .stButton>button:hover {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border-color: #ffffff !important;
+            color: #ffffff !important;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4) !important;
+        }
+        </style>
     """, unsafe_allow_html=True)
     
+    st.markdown("<br><br>", unsafe_allow_html=True)
     _, mid_col, _ = st.columns([1, 1.2, 1])
     with mid_col:
-        st.markdown("<div style='background: rgba(255,255,255,0.015); padding: 40px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px);'>", unsafe_allow_html=True)
-        st.text_input("AUTHORIZED IDENTITY", placeholder="Username")
-        st.text_input("SECURITY KEY", type="password", placeholder="Password")
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("INITIALIZE SYSTEM", use_container_width=True):
+        from yuji_avatar import wombat_html
+        st.markdown(wombat_html, unsafe_allow_html=True)
+        
+        st.text_input("Username")
+        st.text_input("Password", type="password")
+        
+        if st.button("Sign In", use_container_width=True):
             st.session_state['logged_in'] = True
             st.session_state['booting'] = True
             st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
+            
+        st.markdown("""
+            <div style="text-align: center; margin-top: 25px;">
+                <a href="#" style="color: #94a3b8; text-decoration: none; font-size: 14px; margin-right: 15px; font-weight: 500; transition: color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#94a3b8'">Forgot password?</a>
+                <span style="color: #475569;">|</span>
+                <a href="#" style="color: #94a3b8; text-decoration: none; font-size: 14px; margin-left: 15px; font-weight: 500; transition: color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#94a3b8'">Create an Account</a>
+            </div>
+        """, unsafe_allow_html=True)
 
 # --- 6. BOOT SEQUENCE ---
 def boot_sequence():
@@ -181,7 +268,7 @@ def boot_sequence():
         "INITIALIZING CORE SYSTEMS...",
         "CALIBRATING NEURAL INTERFACE...",
         "ENGAGING PRIMARY DRIVES...",
-        "HUD ONLINE. WELCOME, ARCHITECT."
+        "HUD ONLINE. WELCOME, BUDDY ."
     ]
     hud_css = """
     <style>
