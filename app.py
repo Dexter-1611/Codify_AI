@@ -243,11 +243,43 @@ else:
 
     if st.session_state['page'] == 'generator':
         st.markdown("<h1 class='reveal' style='font-family: \"Space Grotesk\", sans-serif; font-weight: 500; font-size: 2rem; color: #f8fafc; margin-bottom: 20px;'>AI <span style='color: #ffffff; opacity: 0.7;'>//</span> ARCHITECT</h1>", unsafe_allow_html=True)
-        q = st.text_area("TASK DEFINITION", placeholder="Describe the software logic to be synthesized...", height=200)
-        lang = st.selectbox("SYNTAX TARGET", ["Python", "Java", "C++", "Javascript", "Rust", "Go"])
+        q = st.text_area("TASK DEFINITION", placeholder="Describe what you want the AI to do with the data or code...", height=200)
+
+        # --- File Upload Section ---
+        uploaded_file = st.file_uploader(
+            "📂 ATTACH DATASET (Optional — Excel, CSV, Google Sheets Export)",
+            type=["csv", "xls", "xlsx"],
+            help="Upload a CSV, Excel (.xlsx/.xls), or exported Google Sheet file for AI analysis."
+        )
+
+        dataset_context = ""
+        if uploaded_file is not None:
+            try:
+                import io
+                ext = uploaded_file.name.split('.')[-1].lower()
+                raw_bytes = uploaded_file.read()
+                if ext == 'csv':
+                    df = pd.read_csv(io.BytesIO(raw_bytes))
+                else:
+                    df = pd.read_excel(io.BytesIO(raw_bytes))
+
+                st.markdown(f"<p style='font-size:0.8rem; color:#94a3b8; margin-top:8px;'>✅ Loaded <b>{uploaded_file.name}</b> — {df.shape[0]} rows × {df.shape[1]} columns</p>", unsafe_allow_html=True)
+                with st.expander("📊 DATASET PREVIEW", expanded=False):
+                    st.dataframe(df.head(10), use_container_width=True)
+
+                # Build dataset context string for the AI
+                dataset_context = (
+                    f"\n\nREFERENCE DATASET: {uploaded_file.name}\n"
+                    f"Shape: {df.shape[0]} rows × {df.shape[1]} columns\n"
+                    f"Columns: {', '.join(df.columns.tolist())}\n"
+                    f"First 50 rows (CSV format):\n{df.head(50).to_csv(index=False)}"
+                )
+            except Exception as e:
+                st.warning(f"⚠️ Could not read file: {e}")
+        lang = st.selectbox("SYNTAX TARGET", ["Python", "Excel Formula", "Google Sheets Formula"])
         
         if st.button("EXECUTE SYNTHESIS"):
-            if q:
+            if q or dataset_context:
                 loader_placeholder = st.empty()
                 loader_html = """
                 <style>
@@ -289,12 +321,19 @@ else:
                 loader_placeholder.markdown(loader_html, unsafe_allow_html=True)
                 
                 try:
+                    if "Formula" in lang:
+                        base_prompt = f"Write a professional {lang} for the following request: {q}" if q else f"Analyze the provided dataset and write helpful {lang}s to process it."
+                    else:
+                        base_prompt = f"Write professional {lang} code for: {q}" if q else f"Analyse the provided dataset and write professional {lang} code to process it."
+                    
+                    full_prompt = base_prompt + dataset_context
                     chat = client.chat.completions.create(
-                        messages=[{"role": "user", "content": f"Write professional {lang} code for: {q}"}],
+                        messages=[{"role": "user", "content": full_prompt}],
                         model="llama-3.3-70b-versatile"
                     )
                     st.session_state['res'] = chat.choices[0].message.content
-                    save_to_history(q, st.session_state['res'], lang)
+                    history_label = q if q else f"Dataset analysis: {uploaded_file.name}"
+                    save_to_history(history_label, st.session_state['res'], lang)
                 except Exception as e:
                     st.error(f"Inference Failure: {e}")
                 finally:
