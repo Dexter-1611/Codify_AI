@@ -1,0 +1,138 @@
+# Codify AI - Project Diagrams
+
+This document contains architectural and conceptual diagrams representing the structure and workflows of the Codify AI project.
+
+## 1. System Architecture Diagram
+
+This diagram illustrates the high-level decoupled architecture of the application, showing the interaction between the Streamlit frontend, the Groq Cloud AI engine, and the SQLite persistence layer.
+
+```mermaid
+graph TD
+    subgraph Client Layer
+        User([User])
+    end
+
+    subgraph Presentation Layer
+        App[Streamlit Frontend<br/>app.py]
+        Auth[Session Management]
+        UI[UI Components & Forms]
+    end
+
+    subgraph Logic Layer
+        Engine[Inference Engine]
+        DatasetParser[Dataset Parser<br/>Pandas]
+    end
+
+    subgraph External APIs
+        Groq((Groq Cloud API<br/>Llama-3.3-70B))
+    end
+
+    subgraph Data Layer
+        DB[(SQLite DB<br/>codify_pro.db)]
+    end
+
+    User -->|Interacts| UI
+    UI --> Auth
+    Auth --> Engine
+    UI -->|Uploads CSV/Excel| DatasetParser
+    DatasetParser --> Engine
+    Engine -->|LLM Prompt| Groq
+    Groq -->|Generated Code| Engine
+    Engine -->|Saves Query & Result| DB
+    UI -.->|Reads Recent Logs| DB
+```
+
+## 2. Sequence Diagram (Code Synthesis Flow)
+
+This sequence diagram details the chronological execution of interactions when a user generates AI code or analyzes a dataset.
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant UI as Streamlit UI
+    participant Session as Session State
+    participant DB as SQLite
+    participant API as Groq API
+
+    User->>UI: Logs in (Credentials)
+    UI->>Session: Set logged_in = True, booting = True
+    UI-->>User: Display Boot HUD
+    UI->>Session: Set booting = False
+    
+    User->>UI: Enter prompt / Upload dataset
+    User->>UI: Click "Synthesize"
+    UI->>UI: Display Loading Cube
+    
+    UI->>API: Send context + prompt
+    Note over API: Inference via Llama-3.3-70B
+    API-->>UI: Return Response (Code/Analysis)
+    
+    UI->>DB: INSERT INTO history (query, code, language)
+    UI-->>User: Display System Output
+```
+
+## 3. Entity-Relationship (ER) Diagram
+
+This represents the schema design of the local SQLite database used for auditing and session history.
+
+```mermaid
+erDiagram
+    HISTORY {
+        TEXT query "User prompt or dataset context details"
+        TEXT code "The generated system output/code"
+        TEXT language "Target language requested (e.g., Python, Excel)"
+    }
+```
+
+## 4. Activity Diagram (User Navigation Flow)
+
+This state diagram captures the user's navigational flowchart through the different states of the application.
+
+```mermaid
+stateDiagram-v2
+    [*] --> LoginPage: Application Loads
+    
+    LoginPage --> BootSequence: Enter Credentials & Sign In
+    BootSequence --> NeuralGenerator: Boot HUD Completes
+    
+    state Menu_Navigation {
+        NeuralGenerator --> TechManifesto: Click "Tech Manifesto"
+        TechManifesto --> NeuralGenerator: Click "Neural Generator"
+    }
+    
+    NeuralGenerator --> ProcessInput: Input Query / Upload Data
+    ProcessInput --> AwaitInference: Click Synthesize
+    AwaitInference --> DisplayResults: Response Received
+    DisplayResults --> NeuralGenerator: Ready for next task
+    
+    Menu_Navigation --> [*]: Click "Terminate Session"
+```
+
+## 5. Data Flow Diagram (DFD - Level 1)
+
+This Data Flow Diagram illustrates how information flows through the Codify AI system, including user inputs, external AI processing, and local data storage.
+
+```mermaid
+graph TD
+    User([User])
+    Auth((1. Authenticate<br/>Session))
+    Input((2. Process<br/>Inputs))
+    Generate((3. Synthesize<br/>Code))
+    Storage((4. Store<br/>History))
+    
+    DB[(SQLite Database)]
+    Llama([Groq Cloud API])
+
+    User -->|Credentials| Auth
+    Auth -->|Login Status| User
+    
+    User -->|Prompt / Dataset| Input
+    Input -->|Context & Prompt| Generate
+    
+    Generate -->|Formatted Request| Llama
+    Llama -->|Generated Code Response| Generate
+    
+    Generate -->|Synthesis Results| User
+    Generate -->|Query & Code| Storage
+    Storage -->|Record| DB
+```

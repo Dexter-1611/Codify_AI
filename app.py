@@ -1327,6 +1327,144 @@ else:
             st.rerun()
 
     if st.session_state['page'] == 'generator':
+        # ── Generator Page: 3D Glassmorphism CSS ─────────────────────────────
+        st.markdown("""
+        <style>
+        /* === 3D GLASSMORPHISM: Generator Page Boxes === */
+
+        /* Perspective wrapper for 3D depth feel */
+        [data-testid="stMainBlockContainer"] {
+            perspective: 1200px;
+        }
+
+        /* ── Text Area ── */
+        .stTextArea > div {
+            background: rgba(15, 23, 42, 0.45) !important;
+            backdrop-filter: blur(22px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(22px) saturate(180%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
+            border-radius: 18px !important;
+            box-shadow:
+                0 8px 32px rgba(0, 0, 0, 0.4),
+                0 2px 8px rgba(220, 20, 60, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1),
+                inset 0 0 40px rgba(255, 255, 255, 0.02) !important;
+            transform: perspective(800px) rotateX(0.6deg) !important;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        .stTextArea > div:focus-within {
+            border-color: rgba(220, 20, 60, 0.45) !important;
+            box-shadow:
+                0 16px 48px rgba(0, 0, 0, 0.5),
+                0 0 24px rgba(220, 20, 60, 0.18),
+                inset 0 1px 0 rgba(255, 255, 255, 0.18),
+                inset 0 0 40px rgba(255, 255, 255, 0.04) !important;
+            transform: perspective(800px) rotateX(0deg) translateY(-3px) !important;
+        }
+        .stTextArea > div > div > textarea {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            color: #f1f5f9 !important;
+            font-family: 'Inter', sans-serif !important;
+        }
+
+        /* ── File Uploader ── */
+        [data-testid="stFileUploader"] {
+            background: rgba(15, 23, 42, 0.4) !important;
+            backdrop-filter: blur(22px) saturate(160%) !important;
+            -webkit-backdrop-filter: blur(22px) saturate(160%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 18px !important;
+            box-shadow:
+                0 8px 32px rgba(0, 0, 0, 0.4),
+                0 2px 8px rgba(147, 51, 234, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08),
+                inset 0 0 40px rgba(255, 255, 255, 0.015) !important;
+            transform: perspective(800px) rotateX(0.5deg) !important;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            padding: 8px !important;
+        }
+        [data-testid="stFileUploader"]:hover {
+            border-color: rgba(147, 51, 234, 0.35) !important;
+            box-shadow:
+                0 16px 48px rgba(0, 0, 0, 0.5),
+                0 0 20px rgba(147, 51, 234, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+            transform: perspective(800px) rotateX(0deg) translateY(-3px) !important;
+        }
+
+        /* ── Selectbox / Language Picker ── */
+        [data-testid="stSelectbox"] {
+            background: rgba(15, 23, 42, 0.42) !important;
+            backdrop-filter: blur(22px) saturate(170%) !important;
+            -webkit-backdrop-filter: blur(22px) saturate(170%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 18px !important;
+            box-shadow:
+                0 8px 32px rgba(0, 0, 0, 0.35),
+                inset 0 1px 0 rgba(255, 255, 255, 0.09) !important;
+            transform: perspective(800px) rotateX(0.5deg) !important;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            padding: 4px 6px !important;
+        }
+        [data-testid="stSelectbox"]:focus-within {
+            border-color: rgba(0, 242, 254, 0.35) !important;
+            box-shadow:
+                0 16px 48px rgba(0, 0, 0, 0.45),
+                0 0 20px rgba(0, 242, 254, 0.14),
+                inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+            transform: perspective(800px) rotateX(0deg) translateY(-3px) !important;
+        }
+
+        /* ── Expander boxes (Dataset / Table preview) ── */
+        [data-testid="stExpander"] {
+            background: rgba(15, 23, 42, 0.45) !important;
+            backdrop-filter: blur(22px) saturate(160%) !important;
+            -webkit-backdrop-filter: blur(22px) saturate(160%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.09) !important;
+            border-radius: 16px !important;
+            box-shadow:
+                0 8px 32px rgba(0, 0, 0, 0.35),
+                inset 0 1px 0 rgba(255, 255, 255, 0.07),
+                inset 0 0 30px rgba(255, 255, 255, 0.01) !important;
+            transform: perspective(900px) rotateX(0.4deg) !important;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            overflow: hidden !important;
+            margin-bottom: 10px !important;
+        }
+        [data-testid="stExpander"]:hover {
+            border-color: rgba(0, 242, 254, 0.25) !important;
+            box-shadow:
+                0 14px 40px rgba(0, 0, 0, 0.45),
+                0 0 16px rgba(0, 242, 254, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+            transform: perspective(900px) rotateX(0deg) translateY(-2px) !important;
+        }
+
+        /* ── Glass highlight shimmer on top edge ── */
+        .stTextArea > div::before,
+        [data-testid="stFileUploader"]::before,
+        [data-testid="stSelectbox"]::before,
+        [data-testid="stExpander"]::before {
+            content: '';
+            display: block;
+            position: absolute;
+            top: 0; left: 10%; right: 10%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .stTextArea > div,
+        [data-testid="stFileUploader"],
+        [data-testid="stSelectbox"],
+        [data-testid="stExpander"] {
+            position: relative !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
         _, center_col, _ = st.columns([1, 2.5, 1])
         with center_col:
             st.markdown("<h1 class='reveal' style='font-family: \"Space Grotesk\", sans-serif; font-weight: 700; font-size: 2.5rem; text-align: center; margin-bottom: 30px; margin-top: 10px; background: linear-gradient(to right, #dc143c, #9333ea); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>AI <span style='opacity: 0.3; -webkit-text-fill-color: #ffffff;'>//</span> ARCHITECT</h1>", unsafe_allow_html=True)
@@ -1549,12 +1687,38 @@ else:
                     <div style='
                         margin-top: 36px;
                         padding: 32px 36px;
-                        border-radius: 14px;
-                        background: rgba(255,255,255,0.025);
-                        border: 1px solid rgba(255,255,255,0.08);
+                        border-radius: 20px;
+                        background: rgba(8, 14, 30, 0.55);
+                        backdrop-filter: blur(28px) saturate(180%);
+                        -webkit-backdrop-filter: blur(28px) saturate(180%);
+                        border: 1px solid rgba(255, 255, 255, 0.1);
+                        border-top: 1px solid rgba(255, 255, 255, 0.2);
                         border-left: 3px solid #dc143c;
-                        box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+                        box-shadow:
+                            0 24px 60px rgba(0, 0, 0, 0.5),
+                            0 0 30px rgba(220, 20, 60, 0.08),
+                            inset 0 1px 0 rgba(255, 255, 255, 0.12),
+                            inset 0 0 60px rgba(255, 255, 255, 0.015);
+                        transform: perspective(1000px) rotateX(0.3deg);
+                        position: relative;
+                        overflow: hidden;
                     '>
+                    <!-- Glass shimmer highlight -->
+                    <div style='
+                        position: absolute;
+                        top: 0; left: 8%; right: 8%;
+                        height: 1px;
+                        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+                        pointer-events: none;
+                    '></div>
+                    <!-- Red accent glow spot -->
+                    <div style='
+                        position: absolute;
+                        top: -40px; left: -40px;
+                        width: 150px; height: 150px;
+                        background: radial-gradient(circle, rgba(220,20,60,0.12) 0%, transparent 70%);
+                        pointer-events: none;
+                    '></div>
                     <h3 style='
                         font-family: "Space Grotesk", sans-serif;
                         font-size: 0.75rem;
