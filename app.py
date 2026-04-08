@@ -3,6 +3,7 @@ import sqlite3
 import os
 import time
 import pandas as pd
+import hashlib
 from groq import Groq
 from dotenv import load_dotenv
 
@@ -16,6 +17,63 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# --- 1.1 DATABASE INITIALIZATION ---
+def init_db():
+    conn = sqlite3.connect('codify_pro.db', check_same_thread=False)
+    cursor = conn.cursor()
+    # Create history table if not exists
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS history (
+            language TEXT,
+            query TEXT,
+            code TEXT
+        )
+    """)
+    # Create users table if not exists
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            username TEXT PRIMARY KEY,
+            password TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+init_db()
+
+# --- 1.2 AUTHENTICATION HELPERS ---
+def hash_password(password):
+    return hashlib.sha256(str.encode(password)).hexdigest()
+
+def create_user(username, password):
+    try:
+        conn = sqlite3.connect('codify_pro.db', check_same_thread=False)
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, hash_password(password)))
+        conn.commit()
+        conn.close()
+        return True
+    except sqlite3.IntegrityError:
+        return False
+
+def verify_user(username, password):
+    conn = sqlite3.connect('codify_pro.db', check_same_thread=False)
+    cursor = conn.cursor()
+    cursor.execute("SELECT password FROM users WHERE username = ?", (username,))
+    result = cursor.fetchone()
+    conn.close()
+    if result and result[0] == hash_password(password):
+        return True
+    return False
+
+# Initialize session state for auth
+if 'logged_in' not in st.session_state:
+    st.session_state['logged_in'] = False
+if 'login_mode' not in st.session_state:
+    st.session_state['login_mode'] = 'login' # 'login' or 'register'
+if 'page' not in st.session_state:
+    st.session_state['page'] = 'generator'
 
 # --- 2. ADVANCED UI & LOGO ANIMATIONS (CSS) ---
 st.markdown("""
@@ -507,75 +565,26 @@ def landing_page():
         resize();
         tick();
 
-        // ── 2. MAGNETIC CURSOR ──────────────────────────────────────────
-        const oldCur = doc.getElementById('ag-cursor');
-        if (oldCur) oldCur.remove();
-        const oldFol = doc.getElementById('ag-follower');
-        if (oldFol) oldFol.remove();
-        const oldSty = doc.getElementById('ag-style');
-        if (oldSty) oldSty.remove();
-
-        const style = doc.createElement('style');
-        style.id = 'ag-style';
-        style.textContent = `
-            * { cursor: none !important; }
-            #ag-cursor {
-                position: fixed; z-index: 999999; pointer-events: none;
-                width: 10px; height: 10px; border-radius: 50%;
-                background: #00f2fe;
-                box-shadow: 0 0 12px #00f2fe, 0 0 24px rgba(6,182,212,0.5);
-                transform: translate(-50%,-50%);
-                transition: width .25s, height .25s, border-radius .25s, background .25s;
-                mix-blend-mode: screen;
-            }
-            #ag-follower {
-                position: fixed; z-index: 999998; pointer-events: none;
-                width: 32px; height: 32px; border-radius: 50%;
-                background: radial-gradient(circle at 30% 30%, rgba(147, 51, 234, 0.8), rgba(90, 20, 160, 0.9) 60%, rgba(30, 0, 70, 1) 100%);
-                box-shadow: 
-                    inset -5px -5px 15px rgba(0, 0, 0, 0.6),
-                    inset 2px 2px 8px rgba(255, 255, 255, 0.5),
-                    0 0 15px rgba(147, 51, 234, 0.6),
-                    0 0 25px rgba(147, 51, 234, 0.4);
-                transform: translate(-50%,-50%);
-                transition: width .3s, height .3s, opacity .3s, border-radius .3s;
-                mix-blend-mode: screen;
-            }
-            #ag-cursor.hov {
-                width: 55px; height: 55px; border-radius: 12px;
-                background: rgba(147,51,234,0.35);
-                mix-blend-mode: normal;
-            }
-            #ag-follower.hov { opacity: 0; }
-        `;
-        doc.head.appendChild(style);
-
-        const cur = doc.createElement('div'); cur.id = 'ag-cursor';
-        const fol = doc.createElement('div'); fol.id = 'ag-follower';
-        doc.body.appendChild(cur); doc.body.appendChild(fol);
-
-        let mx = W/2, my = H/2, fx = mx, fy = my;
-
-        doc.addEventListener('mousemove', e => {
-            mx = e.clientX; my = e.clientY;
-            cur.style.left = mx + 'px'; cur.style.top = my + 'px';
+        // ── 2. RESTORE DEFAULT OS CURSOR ────────────────────────────────
+        // Remove any leftover custom cursor elements from previous renders
+        ['ag-cursor', 'ag-follower', 'ag-style'].forEach(id => {
+            const el = doc.getElementById(id);
+            if (el) el.remove();
         });
-
-        (function moveFol() {
-            fx += (mx - fx) * 0.14;
-            fy += (my - fy) * 0.14;
-            fol.style.left = fx + 'px'; fol.style.top = fy + 'px';
-            requestAnimationFrame(moveFol);
-        })();
-
-        function bindHover() {
-            doc.querySelectorAll('button,a,input,[role="button"]').forEach(el => {
-                if (el._agBound) return; el._agBound = true;
-                el.addEventListener('mouseenter', () => { cur.classList.add('hov'); fol.classList.add('hov'); });
-                el.addEventListener('mouseleave', () => { cur.classList.remove('hov'); fol.classList.remove('hov'); });
-            });
+        // Ensure the native OS cursor is visible everywhere
+        const cursorFix = doc.getElementById('ag-cursor-reset');
+        if (!cursorFix) {
+            const s = doc.createElement('style');
+            s.id = 'ag-cursor-reset';
+            s.textContent = `
+                * { cursor: auto !important; }
+                a, button, [role="button"], label, select,
+                input[type="file"], input[type="submit"],
+                [data-testid="stButton"] > button { cursor: pointer !important; }
+                input[type="text"], textarea { cursor: text !important; }
+            `;
+            doc.head.appendChild(s);
         }
-        setInterval(bindHover, 800);
     </script>
     """, height=0, width=0)
 
@@ -1125,7 +1134,7 @@ def login_page():
         </script>
         """, height=0, width=0)
         
-        st.markdown("""
+        st.markdown(f"""
             <h1 style='text-align: center; 
                        color: #fff; 
                        text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #dc143c, 0 0 40px #dc143c, 0 0 50px #dc143c, 0 0 60px #dc143c, 0 0 70px #dc143c; 
@@ -1137,30 +1146,85 @@ def login_page():
                        font-weight: 800;
                        user-select: none;
                        animation: neon-pulse 1.5s infinite alternate;'>
-                SIGN IN
+                {"SIGN IN" if st.session_state['login_mode'] == 'login' else "CREATE ACCOUNT"}
             </h1>
             <style>
-                @keyframes neon-pulse {
-                    0% { opacity: 0.8; text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #dc143c, 0 0 20px #dc143c; filter: brightness(0.9); }
-                    100% { opacity: 1; text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #dc143c, 0 0 40px #dc143c, 0 0 60px #dc143c; filter: brightness(1.1); }
-                }
+                @keyframes neon-pulse {{
+                    0% {{ opacity: 0.8; text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #dc143c, 0 0 20px #dc143c; filter: brightness(0.9); }}
+                    100% {{ opacity: 1; text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #dc143c, 0 0 40px #dc143c, 0 0 60px #dc143c; filter: brightness(1.1); }}
+                }}
             </style>
         """, unsafe_allow_html=True)
         
-        st.text_input("Username")
-        st.text_input("Password", type="password")
+        user_input = st.text_input("Username", key="login_user")
+        pass_input = st.text_input("Password", type="password", key="login_pass")
         
-        if st.button("Sign In", use_container_width=True):
-            st.session_state['logged_in'] = True
-            st.session_state['booting'] = True
-            st.rerun()
-            
+        if st.session_state['login_mode'] == 'login':
+            if st.button("Sign In", use_container_width=True):
+                if not user_input.strip() or not pass_input.strip():
+                    st.warning("Please enter both username and password.")
+                elif verify_user(user_input.strip(), pass_input.strip()):
+                    st.session_state['logged_in'] = True
+                    st.session_state['booting'] = True
+                    st.rerun()
+                else:
+                    st.error("Invalid username or password.")
+        else:
+            if st.button("Register", use_container_width=True):
+                if not user_input.strip() or not pass_input.strip():
+                    st.warning("Please provide a username and password.")
+                elif create_user(user_input.strip(), pass_input.strip()):
+                    st.success("Account created successfully! Please sign in.")
+                    st.session_state['login_mode'] = 'login'
+                    st.rerun()
+                else:
+                    st.error("Username already exists.")
+        
+        # Footer with Forgot Password and Toggle Mode
+        st.markdown("<br>", unsafe_allow_html=True)
+        col_l, col_r = st.columns([1, 1])
+        with col_l:
+            st.markdown('<div style="text-align: right; margin-top: 8px;"><a href="#" style="color: #94a3b8; text-decoration: none; font-size: 14px; font-weight: 500;">Forgot password?</a></div>', unsafe_allow_html=True)
+        with col_r:
+            toggle_label = "Sign In" if st.session_state['login_mode'] == 'register' else "Create Account"
+            st.markdown('<div id="toggle-auth-container">', unsafe_allow_html=True)
+            if st.button(toggle_label, key="toggle_auth_btn"):
+                st.session_state['login_mode'] = 'register' if st.session_state['login_mode'] == 'login' else 'login'
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+
         st.markdown("""
-            <div style="text-align: center; margin-top: 25px;">
-                <a href="#" style="color: #94a3b8; text-decoration: none; font-size: 14px; margin-right: 15px; font-weight: 500; transition: color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#94a3b8'">Forgot password?</a>
-                <span style="color: #475569;">|</span>
-                <a href="#" style="color: #94a3b8; text-decoration: none; font-size: 14px; margin-left: 15px; font-weight: 500; transition: color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#94a3b8'">Create an Account</a>
-            </div>
+            <style>
+            #toggle-auth-container button {
+                background: none !important;
+                border: none !important;
+                color: #94a3b8 !important;
+                text-decoration: none !important;
+                font-size: 14px !important;
+                font-weight: 500 !important;
+                padding: 0 !important;
+                margin-top: 8px !important;
+                box-shadow: none !important;
+                width: auto !important;
+                min-height: auto !important;
+                line-height: normal !important;
+                display: inline-block !important;
+                transition: color 0.2s !important;
+            }
+            #toggle-auth-container button:hover {
+                color: #ffffff !important;
+                background: none !important;
+                text-decoration: none !important;
+            }
+            #toggle-auth-container button:active {
+                background: none !important;
+                color: #ffffff !important;
+            }
+            #toggle-auth-container .stButton {
+                line-height: 0 !important;
+                text-align: left !important;
+            }
+            </style>
         """, unsafe_allow_html=True)
 
 # --- 6. BOOT SEQUENCE ---
