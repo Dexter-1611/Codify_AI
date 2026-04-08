@@ -1180,11 +1180,9 @@ def login_page():
                 else:
                     st.error("Username already exists.")
         
-        # Footer with Forgot Password and Toggle Mode
+        # Footer with Toggle Mode
         st.markdown("<br>", unsafe_allow_html=True)
         col_l, col_r = st.columns([1, 1])
-        with col_l:
-            st.markdown('<div style="text-align: right; margin-top: 8px;"><a href="#" style="color: #94a3b8; text-decoration: none; font-size: 14px; font-weight: 500;">Forgot password?</a></div>', unsafe_allow_html=True)
         with col_r:
             toggle_label = "Sign In" if st.session_state['login_mode'] == 'register' else "Create Account"
             st.markdown('<div id="toggle-auth-container">', unsafe_allow_html=True)
