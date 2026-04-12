@@ -67,6 +67,18 @@ def verify_user(username, password):
         return True
     return False
 
+def reset_password(username, new_password):
+    conn = sqlite3.connect('codify_pro.db', check_same_thread=False)
+    cursor = conn.cursor()
+    cursor.execute("SELECT username FROM users WHERE username = ?", (username,))
+    if not cursor.fetchone():
+        conn.close()
+        return False
+    cursor.execute("UPDATE users SET password = ? WHERE username = ?", (hash_password(new_password), username))
+    conn.commit()
+    conn.close()
+    return True
+
 # Initialize session state for auth
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
@@ -80,8 +92,17 @@ st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap');
     
+    body, .stApp, .stApp > header, .stAppViewContainer,
+    [data-testid="stAppViewContainer"],
+    [data-testid="stAppViewBlockContainer"], .stMain {
+        background: transparent !important;
+        background-color: transparent !important;
+        background-image: none !important;
+    }
+    body {
+        background-color: #020617 !important;
+    }
     .stApp {
-        background: radial-gradient(circle at top right, #1a1a1a, #000000);
         color: #e2e8f0;
         font-family: 'Inter', sans-serif;
     }
@@ -123,6 +144,8 @@ st.markdown("""
         margin-bottom: 25px;
         line-height: 1.7;
         transition: all 0.3s ease;
+        will-change: transform, box-shadow;
+        transform: translateZ(0);
     }
     .manifesto-card:hover {
         border-color: rgba(255, 255, 255, 0.3);
@@ -213,6 +236,8 @@ st.markdown("""
         padding: 12px 24px !important;
         transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
         text-transform: uppercase !important;
+        will-change: transform, box-shadow !important;
+        transform: translateZ(0) !important;
     }
     
     .stButton>button:hover {
@@ -236,187 +261,251 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# === HOME PAGE: Circular Orbit Particle Background ===
-import streamlit.components.v1 as components
-components.html("""
-<script>
-    const doc = window.parent.document;
+# === UI BACKGROUND ASSETS ===
+def draw_3d_sphere():
+    import streamlit.components.v1 as components
+    components.html("""
+    <script>
+    (function() {
+        var doc = window.parent.document;
+        var win = window.parent;
+        var opp = doc.getElementById('kinetic-dot-grid');
+        if (opp) opp.remove();
+        if (doc.getElementById('home-canvas')) return;
 
-    // Cleanup old canvas
-    const old = doc.getElementById('home-canvas');
-    if (old) old.remove();
+        var canvas = doc.createElement('canvas');
+        canvas.id = 'home-canvas';
+        canvas.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:1;pointer-events:none;opacity:0.9';
+        doc.body.prepend(canvas);
+        var ctx = canvas.getContext('2d');
 
-    const canvas = doc.createElement('canvas');
-    canvas.id = 'home-canvas';
-    Object.assign(canvas.style, {
-        position: 'fixed', top: '0', left: '0',
-        width: '100vw', height: '100vh',
-        zIndex: '0', pointerEvents: 'none',
-        opacity: '0.8'
-    });
-    doc.body.prepend(canvas);
+        var COLORS = ['#dc143c','#e52e6b','#fbbf24','#f97316','rgba(255,255,255,0.75)'];
+        var W = canvas.width = win.innerWidth;
+        var H = canvas.height = win.innerHeight;
+        var target = {x:W/2, y:H/2};
+        var smooth = {x:W/2, y:H/2};
+        var prevSmooth = {x:W/2, y:H/2};
+        var particles = [], stars = [];
+        var rotX=0, rotY=0, R=240;
 
-    // Keep stApp background transparent so we see the canvas
-    const stApp = doc.querySelector('.stApp');
-    if (stApp) stApp.style.backgroundColor = 'transparent';
-    doc.body.style.background =
-        'radial-gradient(circle at top right, #1a1a1a, #000000)';
+        function buildSphere() {
+            particles = [];
+            var phi = Math.PI*(3-Math.sqrt(5));
+            for (var i=0; i<120; i++) {
+                var y=1-(i/119)*2, r=Math.sqrt(1-y*y), t=phi*i;
+                particles.push({x:Math.cos(t)*r, y:y, z:Math.sin(t)*r,
+                    s:Math.random()*2.5+2, c:COLORS[Math.floor(Math.random()*5)],
+                    a:Math.random()*0.4+0.6, w:Math.random()*6.28, ws:(Math.random()-0.5)*0.05});
+            }
+        }
 
-    const ctx = canvas.getContext('2d');
+        function buildStars() {
+            stars = [];
+            for (var i=0; i<120; i++) {
+                stars.push({
+                    bx: Math.random()*W, by: Math.random()*H,
+                    x: 0, y: 0, vx: 0, vy: 0,
+                    r: Math.random()*1.8+0.6,
+                    a: Math.random()*0.4+0.6,
+                    glow: Math.random()*8+6,
+                    tw: Math.random()*6.28,
+                    tws: (Math.random()*0.03+0.01) * (Math.random()<0.5?1:-1)
+                });
+            }
+        }
 
-    // Home page color scheme: crimson, gold, warm white
-    const COLORS = ['#dc143c', '#e52e6b', '#fbbf24', '#f97316', 'rgba(255,255,255,0.7)'];
+        function tick() {
+            if (!doc.getElementById('home-canvas')) return;
+            ctx.clearRect(0,0,W,H);
 
-    let W = canvas.width  = window.parent.innerWidth;
-    let H = canvas.height = window.parent.innerHeight;
+            var dx = smooth.x - prevSmooth.x;
+            var dy = smooth.y - prevSmooth.y;
+            prevSmooth.x = smooth.x;
+            prevSmooth.y = smooth.y;
+            smooth.x += (target.x - smooth.x)*0.05;
+            smooth.y += (target.y - smooth.y)*0.05;
 
-    // Mouse / target position — defaults to screen center
-    let target = { x: W / 2, y: H / 2 };
-    let smooth = { x: W / 2, y: H / 2 };  // smoothed cursor center
+            for (var i=0; i<stars.length; i++) {
+                var s = stars[i];
+                s.tw += s.tws;
+                var twinkle = 0.6 + 0.4*Math.sin(s.tw);
+                var distSq = Math.pow(s.bx+s.x - smooth.x, 2) + Math.pow(s.by+s.y - smooth.y, 2);
+                var influence = Math.max(0, 1 - distSq/(350*350));
+                s.vx -= dx * influence * 0.18;
+                s.vy -= dy * influence * 0.18;
+                s.vx *= 0.92; s.vy *= 0.92;
+                s.x += s.vx; s.y += s.vy;
+                s.x *= 0.97; s.y *= 0.97;
+                ctx.beginPath();
+                ctx.arc(s.bx+s.x, s.by+s.y, s.r, 0, 6.28);
+                ctx.fillStyle = 'rgba(255,255,255,' + (s.a * twinkle) + ')';
+                ctx.fill();
+                // Fake glow (much cheaper than shadowBlur)
+                if (twinkle > 0.6) {
+                    ctx.beginPath();
+                    ctx.arc(s.bx+s.x, s.by+s.y, s.r * 2.5, 0, 6.28);
+                    ctx.fillStyle = 'rgba(200, 220, 255, ' + (0.15 * twinkle) + ')';
+                    ctx.fill();
+                }
+            }
 
-    // ── Build particles on a 3D Sphere ──────────────────────────
-    const NUM_PARTICLES = 180; // slightly more for a bigger sphere
-    let particles = [];
+            rotY += 0.005; rotX += 0.002;
+            var sX=Math.sin(rotX),cX=Math.cos(rotX),sY=Math.sin(rotY),cY=Math.cos(rotY);
+            var proj=[];
+            particles.forEach(function(p) {
+                p.w += p.ws;
+                var rf = 1+Math.sin(p.w)*0.05;
+                var px=p.x*rf, py=p.y*rf, pz=p.z*rf;
+                var ty=py*cX-pz*sX, tz=py*sX+pz*cX; py=ty; pz=tz;
+                var tx=px*cY+pz*sY; tz=-px*sY+pz*cY; px=tx; pz=tz;
+                var zd=400+pz*R, sc=400/zd;
+                proj.push({sx:smooth.x+px*R*sc, sy:smooth.y+py*R*sc, sz:p.s*sc, c:p.c,
+                    a:Math.min(1,Math.max(0,p.a*(0.5+0.8*((pz+1)/2)))), zd:zd});
+            });
+            proj.sort(function(a,b){return b.zd-a.zd;});
+            proj.forEach(function(pt) {
+                var c = pt.c;
+                // Fake glow for sphere particles instead of shadowBlur
+                ctx.beginPath(); ctx.arc(pt.sx,pt.sy,pt.sz*1.8,0,6.28);
+                ctx.fillStyle=c; ctx.globalAlpha=pt.a*0.3; ctx.fill();
+                // Core
+                ctx.beginPath(); ctx.arc(pt.sx,pt.sy,pt.sz,0,6.28);
+                ctx.globalAlpha=pt.a; ctx.fill();
+            });
+            ctx.globalAlpha=1;
+            requestAnimationFrame(tick);
+        }
+
+        doc.addEventListener('mousemove', function(e){ target.x=e.clientX; target.y=e.clientY; });
+        win.addEventListener('resize', function(){
+            if (!doc.getElementById('home-canvas')) return;
+            W=canvas.width=win.innerWidth; H=canvas.height=win.innerHeight;
+            smooth.x=W/2; smooth.y=H/2; prevSmooth.x=W/2; prevSmooth.y=H/2;
+            buildSphere(); buildStars();
+        });
+        buildSphere(); buildStars(); tick();
+    })();
+    </script>
+    """, height=1)
+
+def draw_kinetic_grid():
+    import streamlit.components.v1 as components
+    import streamlit as st
     
-    // Euler angles for sphere rotation
-    let rotX = 0;
-    let rotY = 0;
-    const sphereRadius = 240; // Increased base size of the 3D sphere
+    st.markdown("""
+        <style>
+        body { 
+            background-color: #020617 !important;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(147, 51, 234, 0.08) 0%, transparent 60%),
+                radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.08) 0%, transparent 60%) !important;
+        }
+        [data-testid="stAppViewContainer"], .stApp, .main {
+            background: transparent !important;
+            background-color: transparent !important;
+        }
+        [data-testid="stHeader"] {
+            background-color: rgba(255, 255, 255, 0.0) !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
-    function buildParticles() {
-        particles = [];
-        // Fibonacci sphere distribution for even spread
-        const phi = Math.PI * (3 - Math.sqrt(5)); // golden angle
-        
-        for (let i = 0; i < NUM_PARTICLES; i++) {
-            const y = 1 - (i / (NUM_PARTICLES - 1)) * 2; // y goes from 1 to -1
-            const radiusAtY = Math.sqrt(1 - y * y); // radius at y
-            
-            const theta = phi * i; // golden angle increment
-            
-            const x = Math.cos(theta) * radiusAtY;
-            const z = Math.sin(theta) * radiusAtY;
-            
-            particles.push({
-                x: x,
-                y: y,
-                z: z,
-                baseSize: Math.random() * 2.5 + 2.0, // Increased base particle size for vibrancy
-                color: COLORS[Math.floor(Math.random() * COLORS.length)],
-                alpha: Math.random() * 0.4 + 0.6, // Higher base alpha
-                // slight wobble for breathing effect
-                wobble: Math.random() * Math.PI * 2,
-                wobbleSpeed: (Math.random() - 0.5) * 0.05
+    components.html("""
+    <script>
+    (function() {
+        var doc = window.parent.document;
+        var win = window.parent;
+        var opp = doc.getElementById('home-canvas');
+        if (opp) opp.remove();
+
+        var canvas = doc.getElementById('kinetic-dot-grid');
+
+        if (!canvas) {
+            canvas = doc.createElement('canvas');
+            canvas.id = 'kinetic-dot-grid';
+            canvas.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:-1;pointer-events:none';
+            canvas._mx = -9999; canvas._my = -9999;
+            canvas._ripples = [];
+            doc.body.prepend(canvas);
+
+            var W = canvas.width = win.innerWidth;
+            var H = canvas.height = win.innerHeight;
+            var ctx = canvas.getContext('2d');
+            var SPACING = 32, RADIUS = 280;
+            var dots = [];
+
+            function buildDots() {
+                dots = [];
+                for (var x=SPACING/2; x<W; x+=SPACING)
+                    for (var y=SPACING/2; y<H; y+=SPACING)
+                        dots.push({x:x, y:y});
+            }
+
+            function tick() {
+                var el = doc.getElementById('kinetic-dot-grid');
+                if (!el) return;
+                var mx = el._mx, my = el._my;
+                ctx.clearRect(0,0,W,H);
+
+                for (var i=0; i<dots.length; i++) {
+                    var d=dots[i];
+                    var ddx=d.x-mx, ddy=d.y-my;
+                    var dist=Math.sqrt(ddx*ddx+ddy*ddy);
+                    var t=Math.max(0,1-dist/RADIUS);
+                    ctx.beginPath(); ctx.arc(d.x,d.y,0.9,0,6.28);
+                    ctx.fillStyle='rgba(255,255,255,0.07)'; ctx.fill();
+                    if (t>0) {
+                        ctx.beginPath(); ctx.arc(d.x,d.y,0.9+t*0.9,0,6.28);
+                        ctx.fillStyle='rgba(255,255,255,'+(t*0.8)+')';
+                        ctx.fill();
+                        // Fake glow instead of shadowBlur
+                        ctx.beginPath(); ctx.arc(d.x,d.y,(0.9+t*0.9)*3.5,0,6.28);
+                        ctx.fillStyle='rgba(147,51,234,'+(t*0.15)+')';
+                        ctx.fill();
+                    }
+                }
+                if (mx>-9000) {
+                    var g=ctx.createRadialGradient(mx,my,0,mx,my,RADIUS);
+                    g.addColorStop(0,'rgba(147,51,234,0.10)');
+                    g.addColorStop(0.6,'rgba(6,182,212,0.04)');
+                    g.addColorStop(1,'rgba(0,0,0,0)');
+                    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+                }
+                var rp=el._ripples;
+                for (var j=rp.length-1;j>=0;j--) {
+                    var r=rp[j]; r.radius+=10; r.alpha-=0.022;
+                    if(r.alpha<=0){rp.splice(j,1);continue;}
+                    ctx.beginPath(); ctx.arc(r.x,r.y,r.radius,0,6.28);
+                    ctx.strokeStyle='rgba(147,51,234,'+r.alpha+')';
+                    ctx.lineWidth=1.5; ctx.stroke();
+                }
+                requestAnimationFrame(tick);
+            }
+
+            win.addEventListener('resize', function(){
+                var el=doc.getElementById('kinetic-dot-grid');
+                if(!el) return;
+                W=el.width=win.innerWidth; H=el.height=win.innerHeight;
+                buildDots();
             });
-        }
-    }
 
-    function tick() {
-        ctx.clearRect(0, 0, W, H);
-
-        // Smoothly interpolate cursor follow
-        smooth.x += (target.x - smooth.x) * 0.06;
-        smooth.y += (target.y - smooth.y) * 0.06;
-
-        // Rotate sphere slowly
-        rotY += 0.005;
-        rotX += 0.002;
-
-        const sinX = Math.sin(rotX), cosX = Math.cos(rotX);
-        const sinY = Math.sin(rotY), cosY = Math.cos(rotY);
-
-        // Sort particles by Z so further ones are drawn first (painters algorithm)
-        let projected = [];
-
-        for (const p of particles) {
-            // Apply slight wobble to the distance from center
-            p.wobble += p.wobbleSpeed;
-            const rOffset = 1.0 + Math.sin(p.wobble) * 0.05;
-            
-            let px = p.x * rOffset;
-            let py = p.y * rOffset;
-            let pz = p.z * rOffset;
-
-            // Rotate around X-axis
-            let tempY = py * cosX - pz * sinX;
-            let tempZ = py * sinX + pz * cosX;
-            py = tempY; pz = tempZ;
-
-            // Rotate around Y-axis
-            let tempX = px * cosY + pz * sinY;
-            tempZ = -px * sinY + pz * cosY;
-            px = tempX; pz = tempZ;
-            
-            // Perspective projection
-            const fov = 400;
-            const viewerDistance = 400; // how far viewer is from sphere center
-            // pz range is roughly -1 to 1 based on unit sphere. 
-            // Scale by sphereRadius maps it to roughly -sphereRadius to +sphereRadius
-            const scaledZ = pz * sphereRadius; 
-            
-            const zDepth = viewerDistance + scaledZ;
-            const scale = fov / zDepth;
-            
-            // 2D canvas coordinates centered on smoothed cursor
-            const screenX = smooth.x + (px * sphereRadius * scale);
-            const screenY = smooth.y + (py * sphereRadius * scale);
-            
-            // Depth cues: size and opacity
-            // Normalize Z from -1 (back) to 1 (front) roughly
-            const zNorm = pz; 
-            const finalSize = p.baseSize * scale;
-            
-            // Brighten up the particles: even the back ones are visible
-            let finalAlpha = p.alpha * (0.5 + 0.8 * ((zNorm + 1) / 2)); 
-            if (finalAlpha < 0) finalAlpha = 0;
-            if (finalAlpha > 1) finalAlpha = 1;
-
-            projected.push({
-                sx: screenX, sy: screenY, 
-                size: finalSize, color: p.color, alpha: finalAlpha,
-                zDepth: zDepth
-            });
-        }
-        
-        // Sort highest zDepth (furthest away) to lowest (closest)
-        projected.sort((a, b) => b.zDepth - a.zDepth);
-
-        // Draw projected dots
-        for (const pt of projected) {
-            ctx.beginPath();
-            ctx.arc(pt.sx, pt.sy, pt.size, 0, Math.PI * 2);
-            ctx.fillStyle = pt.color;
-            ctx.globalAlpha = pt.alpha;
-            // Add a subtle glow
-            ctx.shadowBlur = 8;
-            ctx.shadowColor = pt.color;
-            ctx.fill();
-            // Reset shadow so it doesn't affect everything globally if other rendering happens
-            ctx.shadowBlur = 0;
+            buildDots(); tick();
         }
 
-        ctx.globalAlpha = 1;
-        requestAnimationFrame(tick);
-    }
-
-    doc.addEventListener('mousemove', e => {
-        target.x = e.clientX;
-        target.y = e.clientY;
-    });
-
-    window.parent.addEventListener('resize', () => {
-        W = canvas.width  = window.parent.innerWidth;
-        H = canvas.height = window.parent.innerHeight;
-        // keep default centre if mouse hasn't moved yet
-        smooth.x = W / 2; smooth.y = H / 2;
-        target.x = W / 2; target.y = H / 2;
-        buildParticles();
-    });
-
-    buildParticles();
-    tick();
-</script>
-""", height=0, width=0)
+        if (!win.__kdg_init) {
+            win.__kdg_init = true;
+            win.addEventListener('mousemove', function(e) {
+                var el = doc.getElementById('kinetic-dot-grid');
+                if (el) { el._mx = e.clientX; el._my = e.clientY; }
+            }, true);
+            win.addEventListener('click', function(e) {
+                var el = doc.getElementById('kinetic-dot-grid');
+                if (el) { el._ripples.push({x:e.clientX, y:e.clientY, radius:0, alpha:0.6}); }
+            }, true);
+        }
+    })();
+    </script>
+    """, height=1)
 
 # --- 3. DATABASE SETUP ---
 def init_db():
@@ -445,6 +534,7 @@ if 'page' not in st.session_state: st.session_state['page'] = 'generator'
 
 # --- 4.5 LANDING PAGE (BENTO GRID DESIGN) ---
 def landing_page():
+    draw_3d_sphere()
     st.markdown("""
         <style>
         [data-testid="stSidebar"] {display: none;}
@@ -477,116 +567,7 @@ def landing_page():
         }
     """, unsafe_allow_html=True)
 
-    # === PARTICLE BACKGROUND + MAGNETIC CURSOR via components.html (scripts execute here) ===
-    import streamlit.components.v1 as components
-    components.html("""
-    <script>
-        const doc = window.parent.document;
-
-        // ── 1. PARTICLE CANVAS ──────────────────────────────────────────
-        const old = doc.getElementById('codify-canvas');
-        if (old) old.remove();
-
-        const canvas = doc.createElement('canvas');
-        canvas.id = 'codify-canvas';
-        Object.assign(canvas.style, {
-            position: 'fixed', top: '0', left: '0',
-            width: '100vw', height: '100vh',
-            zIndex: '0', pointerEvents: 'none'
-        });
-        doc.body.prepend(canvas);
-
-        // Make Streamlit app container transparent so canvas shows through
-        const stApp = doc.querySelector('.stApp');
-        if (stApp) stApp.style.background = 'transparent';
-        doc.body.style.backgroundColor = '#020617';
-        doc.body.style.backgroundImage =
-            'radial-gradient(circle at 15% 50%, rgba(147,51,234,0.18) 0%, transparent 55%),' +
-            'radial-gradient(circle at 85% 30%, rgba(6,182,212,0.18) 0%, transparent 55%)';
-
-        const ctx = canvas.getContext('2d');
-        const COLORS = ['#00f2fe','#a855f7','#4f46e5','rgba(255,255,255,0.8)'];
-        let W, H, pts = [];
-        const mouse = { x: -9999, y: -9999, r: 160 };
-
-        function resize() {
-            W = canvas.width  = window.parent.innerWidth;
-            H = canvas.height = window.parent.innerHeight;
-            pts = [];
-            const n = Math.floor((W * H) / 5000);
-            for (let i = 0; i < n; i++) {
-                const bx = Math.random() * W;
-                const by = Math.random() * H;
-                pts.push({
-                    x: bx, y: by, bx, by,
-                    r: Math.random() * 2 + 1,
-                    vx: (Math.random() - 0.5) * 0.4,
-                    vy: (Math.random() - 0.5) * 0.4,
-                    color: COLORS[Math.floor(Math.random() * COLORS.length)],
-                    alpha: Math.random() * 0.5 + 0.4,
-                    dens: Math.random() * 25 + 5
-                });
-            }
-        }
-
-        function tick() {
-            ctx.clearRect(0, 0, W, H);
-            for (const p of pts) {
-                // drift base position
-                p.bx += p.vx; p.by += p.vy;
-                if (p.bx > W) p.bx = 0; if (p.bx < 0) p.bx = W;
-                if (p.by > H) p.by = 0; if (p.by < 0) p.by = H;
-
-                // repulsion from mouse
-                const dx = mouse.x - p.x, dy = mouse.y - p.y;
-                const dist = Math.hypot(dx, dy);
-                if (dist < mouse.r && dist > 0) {
-                    const f = (mouse.r - dist) / mouse.r;
-                    p.x -= (dx / dist) * f * p.dens;
-                    p.y -= (dy / dist) * f * p.dens;
-                } else {
-                    p.x += (p.bx - p.x) * 0.07;
-                    p.y += (p.by - p.y) * 0.07;
-                }
-
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-                ctx.fillStyle = p.color;
-                ctx.globalAlpha = p.alpha;
-                ctx.fill();
-            }
-            ctx.globalAlpha = 1;
-            requestAnimationFrame(tick);
-        }
-
-        doc.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
-        doc.addEventListener('mouseleave', () => { mouse.x = -9999; mouse.y = -9999; });
-        window.parent.addEventListener('resize', resize);
-        resize();
-        tick();
-
-        // ── 2. RESTORE DEFAULT OS CURSOR ────────────────────────────────
-        // Remove any leftover custom cursor elements from previous renders
-        ['ag-cursor', 'ag-follower', 'ag-style'].forEach(id => {
-            const el = doc.getElementById(id);
-            if (el) el.remove();
-        });
-        // Ensure the native OS cursor is visible everywhere
-        const cursorFix = doc.getElementById('ag-cursor-reset');
-        if (!cursorFix) {
-            const s = doc.createElement('style');
-            s.id = 'ag-cursor-reset';
-            s.textContent = `
-                * { cursor: auto !important; }
-                a, button, [role="button"], label, select,
-                input[type="file"], input[type="submit"],
-                [data-testid="stButton"] > button { cursor: pointer !important; }
-                input[type="text"], textarea { cursor: text !important; }
-            `;
-            doc.head.appendChild(s);
-        }
-    </script>
-    """, height=0, width=0)
+    restore_cursor()
 
 
     # Hero Section
@@ -882,8 +863,8 @@ def restore_cursor():
     components.html("""
     <script>
         const doc = window.parent.document;
-        // Remove the custom cursor elements injected by landing page
-        ['ag-cursor','ag-follower','ag-style','codify-canvas'].forEach(id => {
+        // Remove the custom cursor elements injected by legacy configs
+        ['ag-cursor','ag-follower','ag-style','codify-canvas', 'login-dot-grid'].forEach(id => {
             const el = doc.getElementById(id);
             if (el) el.remove();
         });
@@ -1013,11 +994,12 @@ def features_page():
 # --- 5. LOGIN PAGE WITH LOGO ---
 
 def login_page():
+    draw_kinetic_grid()
     restore_cursor()
     st.markdown("""
         <style>
         [data-testid="stAppViewContainer"] {
-            background: radial-gradient(circle at top right, #1a1a1a, #000000) !important;
+            background: transparent !important;
         }
         [data-testid="stHeader"] {
             background-color: rgba(255, 255, 255, 0.0) !important;
@@ -1135,29 +1117,35 @@ def login_page():
         """, height=0, width=0)
         
         st.markdown(f"""
-            <h1 style='text-align: center; 
-                       color: #fff; 
-                       text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #dc143c, 0 0 40px #dc143c, 0 0 50px #dc143c, 0 0 60px #dc143c, 0 0 70px #dc143c; 
-                       font-family: "Space Grotesk", sans-serif;
-                       font-size: 3.5rem;
+            <style>
+            @import url('https://fonts.googleapis.com/css2?family=Rubik+Glitch&display=swap');
+            </style>
+            <h1 style='text-align: center;
+                       color: #fff;
+                       text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #dc143c, 0 0 40px #dc143c, 0 0 50px #dc143c, 0 0 60px #dc143c, 0 0 70px #dc143c;
+                       font-family: 'Rubik Glitch', 'Space Grotesk', sans-serif;
+                       font-size: 3.2rem;
                        margin-top: 10px;
                        margin-bottom: 30px;
-                       letter-spacing: 4px;
-                       font-weight: 800;
+                       letter-spacing: 3px;
+                       font-weight: normal;
                        user-select: none;
-                       animation: neon-pulse 1.5s infinite alternate;'>
-                {"SIGN IN" if st.session_state['login_mode'] == 'login' else "CREATE ACCOUNT"}
+                       animation: neon-pulse 2s infinite alternate ease-in-out;
+                       will-change: opacity, transform;
+                       transform: translateZ(0);'>
+                {"SIGN IN" if st.session_state['login_mode'] == 'login' else ("CREATE ACCOUNT" if st.session_state['login_mode'] == 'register' else "RESET PASSWORD")}
             </h1>
             <style>
                 @keyframes neon-pulse {{
-                    0% {{ opacity: 0.8; text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #dc143c, 0 0 20px #dc143c; filter: brightness(0.9); }}
-                    100% {{ opacity: 1; text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #dc143c, 0 0 40px #dc143c, 0 0 60px #dc143c; filter: brightness(1.1); }}
+                    0% {{ opacity: 0.85; transform: scale(0.98); }}
+                    100% {{ opacity: 1; transform: scale(1); }}
                 }}
             </style>
         """, unsafe_allow_html=True)
         
         user_input = st.text_input("Username", key="login_user")
-        pass_input = st.text_input("Password", type="password", key="login_pass")
+        pass_label = "Password" if st.session_state['login_mode'] != 'forgot_password' else "New Password"
+        pass_input = st.text_input(pass_label, type="password", key="login_pass")
         
         if st.session_state['login_mode'] == 'login':
             if st.button("Sign In", use_container_width=True):
@@ -1169,7 +1157,7 @@ def login_page():
                     st.rerun()
                 else:
                     st.error("Invalid username or password.")
-        else:
+        elif st.session_state['login_mode'] == 'register':
             if st.button("Register", use_container_width=True):
                 if not user_input.strip() or not pass_input.strip():
                     st.warning("Please provide a username and password.")
@@ -1179,21 +1167,39 @@ def login_page():
                     st.rerun()
                 else:
                     st.error("Username already exists.")
+        elif st.session_state['login_mode'] == 'forgot_password':
+            if st.button("Reset Password", use_container_width=True):
+                if not user_input.strip() or not pass_input.strip():
+                    st.warning("Please provide a username and new password.")
+                elif reset_password(user_input.strip(), pass_input.strip()):
+                    st.success("Password reset successfully! Please sign in.")
+                    st.session_state['login_mode'] = 'login'
+                    st.rerun()
+                else:
+                    st.error("Username does not exist or error occurred.")
         
         # Footer with Toggle Mode
         st.markdown("<br>", unsafe_allow_html=True)
         col_l, col_r = st.columns([1, 1])
+        with col_l:
+            if st.session_state['login_mode'] == 'login':
+                st.markdown('<div class="toggle-auth-container">', unsafe_allow_html=True)
+                if st.button("Forgot Password?", key="forgot_btn"):
+                    st.session_state['login_mode'] = 'forgot_password'
+                    st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
+        
         with col_r:
-            toggle_label = "Sign In" if st.session_state['login_mode'] == 'register' else "Create Account"
-            st.markdown('<div id="toggle-auth-container">', unsafe_allow_html=True)
+            toggle_label = "Sign In" if st.session_state['login_mode'] in ['register', 'forgot_password'] else "Create Account"
+            st.markdown('<div class="toggle-auth-container">', unsafe_allow_html=True)
             if st.button(toggle_label, key="toggle_auth_btn"):
-                st.session_state['login_mode'] = 'register' if st.session_state['login_mode'] == 'login' else 'login'
+                st.session_state['login_mode'] = 'login' if st.session_state['login_mode'] in ['register', 'forgot_password'] else 'register'
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown("""
             <style>
-            #toggle-auth-container button {
+            .toggle-auth-container button {
                 background: none !important;
                 border: none !important;
                 color: #94a3b8 !important;
@@ -1209,16 +1215,16 @@ def login_page():
                 display: inline-block !important;
                 transition: color 0.2s !important;
             }
-            #toggle-auth-container button:hover {
+            .toggle-auth-container button:hover {
                 color: #ffffff !important;
                 background: none !important;
                 text-decoration: none !important;
             }
-            #toggle-auth-container button:active {
+            .toggle-auth-container button:active {
                 background: none !important;
                 color: #ffffff !important;
             }
-            #toggle-auth-container .stButton {
+            .toggle-auth-container .stButton {
                 line-height: 0 !important;
                 text-align: left !important;
             }
@@ -1241,13 +1247,23 @@ def boot_sequence():
         color: #ffffff;
         font-size: 2rem;
         text-align: center;
-        margin-top: 40vh;
-        text-shadow: 0 0 15px rgba(255, 255, 255, 0.7);
-        animation: pulse 1s infinite alternate;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-shadow: 0 0 15px rgba(0, 242, 254, 0.7), 0 0 30px rgba(147, 51, 234, 0.5);
+        animation: pop-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards, pulse 1.5s infinite alternate 0.4s;
+        z-index: 10000;
+        white-space: nowrap;
+    }
+    @keyframes pop-in {
+        0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; filter: blur(8px); }
+        70% { transform: translate(-50%, -50%) scale(1.05); opacity: 1; filter: blur(0px); }
+        100% { transform: translate(-50%, -50%) scale(1); opacity: 1; filter: blur(0px); }
     }
     @keyframes pulse {
-        0% { opacity: 0.7; }
-        100% { opacity: 1; }
+        0% { opacity: 0.8; text-shadow: 0 0 15px rgba(0, 242, 254, 0.7), 0 0 30px rgba(147, 51, 234, 0.5); }
+        100% { opacity: 1; text-shadow: 0 0 25px rgba(0, 242, 254, 1), 0 0 50px rgba(147, 51, 234, 0.8), 0 0 10px #ffffff; }
     }
     .hud-overlay {
         position: fixed;
@@ -1277,6 +1293,7 @@ elif st.session_state.get('booting', False):
     st.session_state['booting'] = False
     st.rerun()
 else:
+    draw_kinetic_grid()
     restore_cursor()
     with st.sidebar:
         import base64
@@ -1316,7 +1333,6 @@ else:
                     height: 100%;
                     z-index: 2;
                     pointer-events: none;
-                    filter: drop-shadow(0px 0px 3px rgba(0, 242, 254, 0.6));
                 }}
                 .coolant-cyan {{
                     fill: none;
@@ -1392,6 +1408,15 @@ else:
         # ── Generator Page: 3D Glassmorphism CSS ─────────────────────────────
         st.markdown("""
         <style>
+        /* === GLOBAL TRANSPARENCY: Reveal Canvas Background === */
+        [data-testid="stAppViewContainer"], .stApp, .main {
+            background: transparent !important;
+            background-color: transparent !important;
+        }
+        [data-testid="stHeader"] {
+            background-color: rgba(255, 255, 255, 0.0) !important;
+        }
+
         /* === 3D GLASSMORPHISM: Generator Page Boxes === */
 
         /* Perspective wrapper for 3D depth feel */
@@ -1411,8 +1436,9 @@ else:
                 0 2px 8px rgba(220, 20, 60, 0.08),
                 inset 0 1px 0 rgba(255, 255, 255, 0.1),
                 inset 0 0 40px rgba(255, 255, 255, 0.02) !important;
-            transform: perspective(800px) rotateX(0.6deg) !important;
+            transform: perspective(800px) rotateX(0.6deg) translateZ(0) !important;
             transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            will-change: transform, box-shadow;
         }
         .stTextArea > div:focus-within {
             border-color: rgba(220, 20, 60, 0.45) !important;
@@ -1421,7 +1447,7 @@ else:
                 0 0 24px rgba(220, 20, 60, 0.18),
                 inset 0 1px 0 rgba(255, 255, 255, 0.18),
                 inset 0 0 40px rgba(255, 255, 255, 0.04) !important;
-            transform: perspective(800px) rotateX(0deg) translateY(-3px) !important;
+            transform: perspective(800px) rotateX(0deg) translateY(-3px) translateZ(0) !important;
         }
         .stTextArea > div > div > textarea {
             background: transparent !important;
@@ -1443,8 +1469,9 @@ else:
                 0 2px 8px rgba(147, 51, 234, 0.08),
                 inset 0 1px 0 rgba(255, 255, 255, 0.08),
                 inset 0 0 40px rgba(255, 255, 255, 0.015) !important;
-            transform: perspective(800px) rotateX(0.5deg) !important;
+            transform: perspective(800px) rotateX(0.5deg) translateZ(0) !important;
             transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            will-change: transform, box-shadow;
             padding: 8px !important;
         }
         [data-testid="stFileUploader"]:hover {
@@ -1453,7 +1480,7 @@ else:
                 0 16px 48px rgba(0, 0, 0, 0.5),
                 0 0 20px rgba(147, 51, 234, 0.15),
                 inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
-            transform: perspective(800px) rotateX(0deg) translateY(-3px) !important;
+            transform: perspective(800px) rotateX(0deg) translateY(-3px) translateZ(0) !important;
         }
 
         /* ── Selectbox / Language Picker ── */
