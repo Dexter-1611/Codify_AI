@@ -1557,6 +1557,8 @@ else:
         _, center_col, _ = st.columns([1, 2.5, 1])
         with center_col:
             st.markdown("<h1 class='reveal' style='font-family: \"Space Grotesk\", sans-serif; font-weight: 700; font-size: 2.5rem; text-align: center; margin-bottom: 30px; margin-top: 10px; background: linear-gradient(to right, #dc143c, #9333ea); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>AI <span style='opacity: 0.3; -webkit-text-fill-color: #ffffff;'>//</span> ARCHITECT</h1>", unsafe_allow_html=True)
+            from codify_avatar_input import codify_input_html
+            st.markdown(codify_input_html, unsafe_allow_html=True)
             q = st.text_area("What would you like to build?", placeholder="Describe your objective, feature, or data manipulation task in plain English...", height=180)
             
             # --- File Upload Section ---
@@ -1772,54 +1774,23 @@ else:
         if 'res' in st.session_state:
             _, out_col, _ = st.columns([0.1, 9.8, 0.1])
             with out_col:
-                st.markdown("""
-                    <div style='
-                        margin-top: 36px;
-                        padding: 32px 36px;
-                        border-radius: 20px;
-                        background: rgba(8, 14, 30, 0.55);
-                        backdrop-filter: blur(28px) saturate(180%);
-                        -webkit-backdrop-filter: blur(28px) saturate(180%);
-                        border: 1px solid rgba(255, 255, 255, 0.1);
-                        border-top: 1px solid rgba(255, 255, 255, 0.2);
-                        border-left: 3px solid #dc143c;
-                        box-shadow:
-                            0 24px 60px rgba(0, 0, 0, 0.5),
-                            0 0 30px rgba(220, 20, 60, 0.08),
-                            inset 0 1px 0 rgba(255, 255, 255, 0.12),
-                            inset 0 0 60px rgba(255, 255, 255, 0.015);
-                        transform: perspective(1000px) rotateX(0.3deg);
-                        position: relative;
-                        overflow: hidden;
-                    '>
-                    <!-- Glass shimmer highlight -->
-                    <div style='
-                        position: absolute;
-                        top: 0; left: 8%; right: 8%;
-                        height: 1px;
-                        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-                        pointer-events: none;
-                    '></div>
-                    <!-- Red accent glow spot -->
-                    <div style='
-                        position: absolute;
-                        top: -40px; left: -40px;
-                        width: 150px; height: 150px;
-                        background: radial-gradient(circle, rgba(220,20,60,0.12) 0%, transparent 70%);
-                        pointer-events: none;
-                    '></div>
-                    <h3 style='
-                        font-family: "Space Grotesk", sans-serif;
-                        font-size: 0.75rem;
-                        font-weight: 600;
-                        color: #dc143c;
-                        letter-spacing: 3px;
-                        text-transform: uppercase;
-                        margin-bottom: 24px;
-                    '>⚡ SYSTEM OUTPUT</h3>
-                """, unsafe_allow_html=True)
+                from codify_avatar import codify_html
+                st.markdown(f"""
+<div style='display: flex; flex-direction: row; align-items: flex-start; gap: 24px; margin-top: 36px;'>
+<!-- Mascot Container -->
+<div style='flex: 0 0 160px; margin-top: 10px;'>
+{codify_html}
+</div>
+<!-- Output Box -->
+<div style='flex: 1 1 auto; padding: 32px 36px; border-radius: 20px; background: rgba(8, 14, 30, 0.65); backdrop-filter: blur(28px) saturate(180%); -webkit-backdrop-filter: blur(28px) saturate(180%); border: 1px solid rgba(255, 255, 255, 0.1); border-top: 1px solid rgba(255, 255, 255, 0.2); border-left: 3px solid #00e5ff; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 229, 255, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 0 60px rgba(255, 255, 255, 0.015); transform: perspective(1000px) rotateX(0.3deg); position: relative; overflow: hidden;'>
+<!-- Glass shimmer highlight -->
+<div style='position: absolute; top: 0; left: 8%; right: 8%; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); pointer-events: none;'></div>
+<!-- Blue accent glow spot -->
+<div style='position: absolute; top: -40px; left: -40px; width: 150px; height: 150px; background: radial-gradient(circle, rgba(0,229,255,0.12) 0%, transparent 70%); pointer-events: none;'></div>
+<h3 style='font-family: "Space Grotesk", sans-serif; font-size: 0.75rem; font-weight: 600; color: #00e5ff; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 24px; display: flex; align-items: center; gap: 10px;'>⚡ CODIFY'S RESPONSE</h3>
+""", unsafe_allow_html=True)
                 st.markdown(st.session_state['res'])
-                st.markdown("</div>", unsafe_allow_html=True)
+                st.markdown("</div></div>", unsafe_allow_html=True)
 
     elif st.session_state['page'] == 'docs':
         st.markdown("<h1 style='font-family: \"Space Grotesk\", sans-serif; font-weight: 500; color: #f8fafc; font-size: 2.2rem; margin-bottom: 30px;' class='reveal'>TECHNICAL <span style='color: #ffffff; opacity: 0.6;'>MANIFESTO</span></h1>", unsafe_allow_html=True)

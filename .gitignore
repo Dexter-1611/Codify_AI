@@ -3,3 +3,16 @@
 __pycache__/
 *.db
 dexter.txt
+# Temporary scratch and debug files
+page_dump.html
+output.txt
+test_animation.html
+process_*.py
+update_avatar.py
+analyze_animation.py
+test_bypass.py
+test_model.py
+test_slide.py
+render_presentation.py
+import os.py
+encode_yuji.py
