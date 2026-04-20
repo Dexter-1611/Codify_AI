@@ -112,15 +112,22 @@ st.markdown("""
     }
 
     /* === BASE RESET === */
+    html {
+        scroll-behavior: smooth !important;
+    }
     body, .stApp, .stApp > header, .stAppViewContainer,
     [data-testid="stAppViewContainer"],
     [data-testid="stAppViewBlockContainer"], .stMain {
         background: transparent !important;
         background-color: transparent !important;
         background-image: none !important;
+        scroll-behavior: smooth !important;
     }
     body {
         background-color: #080808 !important;
+        -webkit-font-smoothing: antialiased !important;
+        -moz-osx-font-smoothing: grayscale !important;
+        text-rendering: optimizeLegibility !important;
     }
     .stApp {
         color: var(--charcoal);
@@ -219,6 +226,11 @@ st.markdown("""
         line-height: 1.75;
     }
 
+    /* === GLOBAL SMOOTH TRANSITIONS === */
+    a, p, span, h1, h2, h3, h4, h5, h6, div {
+        transition: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease !important;
+    }
+    
     /* === OBSIDIAN BUTTON SYSTEM === */
     .stButton > button {
         background: rgba(212,175,101,0.07) !important;
