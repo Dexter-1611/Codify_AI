@@ -283,6 +283,37 @@ st.markdown("""
         font-weight: 500 !important;
     }
 
+    /* Universal Fix for Text Area and File Uploader Backgrounds */
+    .stTextArea textarea, 
+    .stTextArea div[data-baseweb="base-input"],
+    .stTextArea div[data-baseweb="textarea"] {
+        background-color: rgba(18,15,10,0.88) !important;
+        color: var(--charcoal) !important;
+    }
+    .stTextArea div[data-baseweb="base-input"],
+    .stTextArea div[data-baseweb="textarea"] {
+        border: 1px solid rgba(212,175,101,0.22) !important;
+        border-radius: 14px !important;
+    }
+    .stTextArea textarea {
+        background-color: transparent !important; /* Let the wrapper background show */
+        border: none !important;
+    }
+    
+    [data-testid="stFileUploader"] section,
+    [data-testid="stFileUploaderDropzone"],
+    [data-testid="stFileUploadDropzone"] {
+        background-color: rgba(18,15,10,0.88) !important;
+        border: 1px dashed rgba(212,175,101,0.5) !important;
+        border-radius: 14px !important;
+        color: var(--charcoal) !important;
+    }
+    [data-testid="stFileUploader"] section *,
+    [data-testid="stFileUploaderDropzone"] *,
+    [data-testid="stFileUploadDropzone"] * {
+        color: var(--charcoal) !important;
+    }
+
     /* === SIDEBAR (Pitch Black) === */
     [data-testid="stSidebar"] {
         background-color: rgba(6,5,3,0.97) !important;
@@ -1666,7 +1697,7 @@ def boot_sequence():
         "INITIALISING CORE SYSTEMS...",
         "CALIBRATING NEURAL INTERFACE...",
         "ENGAGING PRIMARY DRIVES...",
-        "Jarvis Online, Welcome Buddy",
+        "JARVIS ONLINE, WELCOME BUDDY",
     ]
     hud_css = """
     <style>
