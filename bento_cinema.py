@@ -257,19 +257,10 @@ sync(0);sa();
 </body>
 </html>"""
 
-# Cache the encoded video so it is only read from disk once per session
-_VIDEO_DATA_URI = None
-
 def render_bento_cinema():
     """Render Codify AI static bento gallery with interactive modals."""
-    global _VIDEO_DATA_URI
-    if _VIDEO_DATA_URI is None:
-        import base64, os
-        video_path = os.path.join(os.path.dirname(__file__), "assets", "bento", "ai_core.mp4")
-        if os.path.exists(video_path):
-            with open(video_path, "rb") as _f:
-                _VIDEO_DATA_URI = "data:video/mp4;base64," + base64.b64encode(_f.read()).decode()
-        else:
-            _VIDEO_DATA_URI = ""  # fallback: empty src
-    html = BENTO_CINEMA_HTML.replace("__VIDEO_SRC__", _VIDEO_DATA_URI, 1)
+    # Using Streamlit static file serving to prevent Memory/AssertionError
+    # Requires .streamlit/config.toml -> enableStaticServing = true
+    html = BENTO_CINEMA_HTML.replace("__VIDEO_SRC__", "app/static/ai_core.mp4", 1)
+    import streamlit.components.v1 as components
     components.html(html, height=652, scrolling=False)
