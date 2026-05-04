@@ -1254,10 +1254,6 @@ def landing_page():
 
     st.markdown('<div class="oa-divider-line"></div>', unsafe_allow_html=True)
 
-    import sys, importlib
-    if 'bento_cinema' in sys.modules:
-        import bento_cinema
-        importlib.reload(bento_cinema)
     from bento_cinema import render_bento_cinema
     render_bento_cinema()
 
